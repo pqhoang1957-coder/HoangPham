@@ -80,10 +80,14 @@ if st.button("Soạn Thảo Báo Cáo"):
         
         try:
             # --- ƯU TIÊN 1: Xử lý File Ghi Âm ---
-            if uploaded_file is not None:
+           if uploaded_file is not None:
                 st.info("Phát hiện file ghi âm. Đang ưu tiên phiên âm và tóm tắt file...")
-                # Tải file lên API
-                file = client.files.upload(file=uploaded_file)
+                
+                # SỬA LỖI Ở ĐÂY: Thêm mime_type
+                file = client.files.upload(
+                    file=uploaded_file, 
+                    mime_type=uploaded_file.type # <-- BẮT BUỘC PHẢI THÊM
+                )
                 
                 # Nội dung sẽ bao gồm Prompt + File
                 full_prompt_contents = [
@@ -119,5 +123,6 @@ if st.button("Soạn Thảo Báo Cáo"):
             if file is not None:
                 client.files.delete(name=file.name)
                 st.success("Đã dọn dẹp file tạm trên máy chủ Gemini.")
+
 
 
