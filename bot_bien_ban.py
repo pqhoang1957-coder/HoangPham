@@ -1,4 +1,4 @@
-# app_web_bien_ban.py - Trợ Lý Viết Biên Bản (Hỗ trợ Text và Ghi Âm)
+# app_web_bien_ban.py - Trợ Lý Viết Biên Bản (Đã sửa lỗi Cú pháp API)
 
 import streamlit as st
 from google import genai
@@ -10,10 +10,8 @@ import os
 # ----------------------------------------------------
 # Đọc Key từ st.secrets
 try:
-    # Đã sửa lỗi canh lề
     API_KEY = st.secrets.GEMINI_API_KEY
 except AttributeError:
-    # Đã sửa lỗi canh lề
     st.error("LỖI CẤU HÌNH: Không tìm thấy GEMINI_API_KEY trong Streamlit Secrets.")
     st.stop() 
 
@@ -51,24 +49,21 @@ Quy tắc hoạt động:
 st.title("🤖 Trợ Lý Biên Bản (VBI HCM - Gemini)")
 st.caption("Xử lý Biên Bản từ Văn bản hoặc File Ghi Âm (MP3/WAV/FLAC).")
 
-# --- 1. Hộp tải file Ghi Âm --- (Bỏ dấu '---' để tránh lỗi cú pháp)
-# [1] CHÚ THÍCH PHẢI DÙNG DẤU '#'
-st.markdown("### Tùy chọn 1: Tải file ghi âm") 
+# --- 1. Hộp tải file Ghi Âm ---
 uploaded_file = st.file_uploader(
-    "Tải lên file ghi âm cuộc họp (.mp3, .wav, .flac)",
+    "Tải lên file ghi âm cuộc họp (.mp3, .wav, .flac)", 
     type=["mp3", "wav", "flac"]
 )
 
 st.markdown("---") # Đường kẻ ngang để phân chia giao diện
 
-# --- 2. Hộp dán văn bản --- (Bỏ dấu '---')
-# [2] CHÚ THÍCH PHẢI DÙNG DẤU '#'
-st.markdown("### Tùy chọn 2: Dán văn bản")
+# --- 2. Hộp dán văn bản ---
 meeting_notes = st.text_area(
-    "HOẶC Dán Nội Dung Cuộc Họp Thô vào ô dưới đây:",
-    height=200,
+    "HOẶC Dán Nội Dung Cuộc Họp Thô vào ô dưới đây:", 
+    height=200, 
     placeholder="Chỉ dùng khi không tải file ghi âm."
 )
+
 
 # --- 3. LOGIC XỬ LÝ CHÍNH ---
 if st.button("Soạn Thảo Báo Cáo"):
@@ -88,10 +83,11 @@ if st.button("Soạn Thảo Báo Cáo"):
             if uploaded_file is not None:
                 st.info("Phát hiện file ghi âm. Đang ưu tiên phiên âm và tóm tắt file...")
                 
-                # Đã sửa lỗi cú pháp 'mime_type' và 'display_name'
-                file = client.files.upload(file=uploaded_file) 
+                # SỬA LỖI: Xóa đối số mime_type (Vì phiên bản trên Cloud không nhận)
+                file = client.files.upload(
+                    file=uploaded_file
+                )
                 
-               
                 # Nội dung sẽ bao gồm Prompt + File
                 full_prompt_contents = [
                     system_instruction, 
@@ -101,14 +97,13 @@ if st.button("Soạn Thảo Báo Cáo"):
                 model_to_use = 'gemini-2.5-pro' # Dùng Pro cho Audio
                 
             # --- ƯU TIÊN 2: Xử lý Văn bản Dán ---
-            elif meeting_notes.strip(): # Mức thụt lề đã đúng
+            elif meeting_notes.strip(): 
                 st.info("Phát hiện văn bản dán. Đang xử lý nội dung thô...")
                 # Nội dung chỉ là chuỗi văn bản
                 full_prompt_contents = system_instruction + "\n\nNỘI DUNG CUỘC HỌP CẦN TÓM TẮT:\n---\n" + meeting_notes + "\n---"
                 model_to_use = 'gemini-2.5-flash' # Dùng Flash cho Văn bản
             
             # --- Gọi API ---
-            # Khối này đã cùng mức thụt lề với if/elif
             response = client.models.generate_content(
                 model=model_to_use,
                 contents=full_prompt_contents,
@@ -127,6 +122,7 @@ if st.button("Soạn Thảo Báo Cáo"):
             if file is not None:
                 client.files.delete(name=file.name)
                 st.success("Đã dọn dẹp file tạm trên máy chủ Gemini.")
+
 
 
 
