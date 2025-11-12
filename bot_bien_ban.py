@@ -50,7 +50,7 @@ st.title("🤖 Trợ Lý Biên Bản (VBI HCM - Gemini)")
 st.caption("Công cụ chỉ xử lý Văn bản. Vui lòng dán nội dung đã được phiên âm.")
 
 # Bổ sung câu hướng dẫn của bạn
-st.info("⚠️ Nếu bạn có file MP3, hãy dùng Google **NotebookLM** để chuyển đổi sang văn bản rồi dán vào đây, nếu dùng Teams thì dán Transcrip vào. Xin lỗi vì sự bất tiện này.")
+st.info("⚠️ Nếu bạn có file MP3, hãy dùng Google **NotebookLM** để chuyển đổi sang văn bản rồi dán vào đây, nếu dùng Teams thì dán Transcript vào. Xin lỗi vì sự bất tiện này.")
 
 # --- Hộp dán văn bản ---
 meeting_notes = st.text_area(
@@ -88,4 +88,5 @@ if st.button("Soạn Thảo Báo Cáo"):
         except Exception as e:
             st.error(f"Lỗi Kết Nối hoặc Xác Thực: {e}")
             st.error("Vui lòng kiểm tra lại API Key hoặc thử lại sau (Lỗi quá tải server 503).")
+
 
