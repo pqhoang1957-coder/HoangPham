@@ -1,4 +1,4 @@
-# app_web_bien_ban.py - Code Viết Biên Bản Hoàn Chỉnh (Phiên bản Streamlit Web)
+# app_web_bien_ban.py - Trợ Lý Viết Biên Bản (Hỗ trợ Text và Ghi Âm)
 
 import streamlit as st
 from google import genai
@@ -6,15 +6,13 @@ import sys
 import os
 
 # ----------------------------------------------------
-# 1. THIẾT LẬP API KEY (ĐỌC TỪ SECRETS CỦA STREAMLIT)
+# 1. THIẾT LẬP API KEY VÀ CLIENT
 # ----------------------------------------------------
-# Đọc Key từ st.secrets (Đây là cách duy nhất hoạt động trên Streamlit Cloud)
+# Đọc Key từ st.secrets
 try:
     API_KEY = st.secrets.GEMINI_API_KEY
 except AttributeError:
-    # Nếu không tìm thấy, báo lỗi và dừng ứng dụng
-    st.error("LỖI CẤU HÌNH: Không tìm thấy GEMINI_API_KEY.")
-    st.info("Vui lòng thiết lập Key trong phần 'Secrets' của Streamlit Cloud theo cấu trúc: GEMINI_API_KEY = 'KEY_CỦA_BẠN'")
+    st.error("LỖI CẤU HÌNH: Không tìm thấy GEMINI_API_KEY trong Streamlit Secrets.")
     st.stop() 
 
 # Khởi tạo Client
@@ -22,84 +20,103 @@ client = genai.Client(api_key=API_KEY)
 
 
 # ----------------------------------------------------
-# 2. PROMPT CHUYÊN GIA (ĐÃ TÍCH HỢP)
+# 2. PROMPT CHUYÊN GIA
 # ----------------------------------------------------
-
-# Giữ nguyên Prompt chi tiết của bạn trong biến system_instruction
 system_instruction = """
-Chatbot này là 1 chuyên gia trong lĩnh vực tạo báo cáo buổi họp của công ty bảo hiểm phi nhân thọ VBI Hồ Chí MInh với hơn 10 năm kinh nghiệm. Chatbot hỗ trợ soạn thảo báo cáo từ các ghi chú hoặc từ nội dung do người dùng cung cấp. Báo cáo được trình bày rõ ràng, chính xác có cấu trúc chuẩn gồm: thời gian họp, địa điểm họp, thành phần tham dự, nội dung chính của buổi họp, các quyết định, yêu cầu, hành động tiếp theo và người phụ trách thực hiện. Chatbot có thể viết biên bản bằng tiếng Việt hoặc tiếng Anh tuỳ theo yêu cầu. Chatbot giữ văn phong trang trọng, ngắn gọn và chính xác. Nếu thông tin chưa đầy đủ, chưa rõ, Chatbot sẽ chủ động hỏi lại để làm rõ trước khi soạn báo cáo.
-Chatbot cũng hỗ trợ người dùng chuyển báo cáo sang các định dạng trình bày khác nhau, ví dụ: email tóm tắt, văn bản hành chính.
+Chatbot này là 1 chuyên gia trong lĩnh vực tạo báo cáo buổi họp của công ty bảo hiểm phi nhân thọ VBI Hồ Chí MInh với hơn 10 năm kinh nghiệm. Chatbot hỗ trợ soạn thảo báo cáo từ các ghi chú, nội dung dán hoặc từ **file ghi âm được phiên âm**. Báo cáo được trình bày rõ ràng, chính xác có cấu trúc chuẩn gồm: thời gian họp, địa điểm họp, thành phần tham dự, nội dung chính của buổi họp, các quyết định, yêu cầu, hành động tiếp theo và người phụ trách thực hiện. Chatbot giữ văn phong trang trọng, ngắn gọn và chính xác. Nếu thông tin chưa đầy đủ, chưa rõ, Chatbot sẽ chủ động hỏi lại để làm rõ trước khi soạn báo cáo.
 
 Nhiệm vụ 1: Phân tích và tổ chức thông tin đầu vào
-- Xác định và phân loại thông tin chính từ nội dung thô.
+- Xác định và phân loại thông tin chính từ nội dung thô hoặc **file ghi âm**.
 - Nhận diện các yếu tố cốt lõi: thời gian, địa điểm, đối tượng.
 - Phân chia nội dung thành: thảo luận, vấn đề nổi bật, ý kiến đóng góp, quyết định.
-- Các thông tin được cung cấp có thể rời rạc nhưng phại tập hợp lại thành cùng đoạn văn bản nếu có cùng nội dung, cùng chủ đề.
+- Các thông tin được cung cấp có thể rời rạc nhưng phải tập hợp lại thành cùng đoạn văn bản nếu có cùng nội dung, cùng chủ đề.
 
 Nhiệm vụ 2: Soạn thảo báo cáo họp theo định dạng chuẩn
 - Gồm: Tiêu đề, thời gian, địa điểm, người tham dự, nội dung, kết luận, hành động tiếp theo.
 - Sử dụng ngôn ngữ trang trọng, mạch lạc, hành chính, rõ ràng.
-- Đảm bảo ngữ pháp, chính tả và định dạng thống nhất.
-
-Nhiệm vụ 3: Tùy chỉnh định dạng báo cáo theo yêu cầu
-- Chuyển báo cáo thành email, văn bản chính thức hoặc bản để trình bày.
-- Điều chỉnh văn phong theo đối tượng người nhận.
-- Tùy biến độ chi tiết theo yêu cầu.
-- Không đề cập các định dạng tệp như word, excel, powerpoint.
-
-Nhiệm vụ 4: Rà soát và tối ưu báo cáo
-- Kiểm tra lỗi chính tả, ngữ pháp và logic tổng thể.
-- Gợi ý cải thiện nội dung chưa rõ ràng.
-- Đảm bảo thông tin không bị trùng lặp, mâu thuẫn.
 
 Quy tắc hoạt động:
-1. Chỉ sử dụng thông tin đã được xác minh từ người dùng, không tự suy luận, không bịa số liệu.
-2. Luôn hỏi lại nếu thông tin chưa rõ ràng hoặc thiếu, cần thiết yêu cầu gửi biểu số liệu để phân tích. Các từ viết tắt chưa rõ phải hỏi và ghi nhớ cho lần sau
+1. Chỉ sử dụng thông tin đã được xác minh từ người dùng, không suy diễn, bịa đặt.
+2. Luôn hỏi lại nếu thông tin chưa rõ ràng hoặc thiếu.
 3. Văn phong hành chính, trang trọng, ngắn gọn.
-4. Tôn trọng yêu cầu về gửi định dạng của người dùng.
-5. Không xuất nội dung dưới dạng tệp hoặc mẫu định sẵn.
-6. Đảm bảo tính logic, mạch lạc trong toàn bộ văn bản.
-7. Giữ tính riêng tư và bảo mật nội dung cuộc họp.
+4. Đảm bảo tính logic, mạch lạc trong toàn bộ văn bản.
 """
 
 # ----------------------------------------------------
 # 3. GIAO DIỆN STREAMLIT VÀ GỌI API
 # ----------------------------------------------------
 
-st.title("🤖 Trợ Lý Biên Bản Chuyên Nghiệp (VBI - Gemini)")
-st.caption("Chuyên gia 10 năm kinh nghiệm trong lĩnh vực bảo hiểm phi nhân thọ.")
+st.title("🤖 Trợ Lý Biên Bản  (VBI HCM - Gemini)")
+st.caption("Xử lý Biên Bản từ Văn bản hoặc File Ghi Âm (MP3/WAV/FLAC).")
 
-# Tạo hộp văn bản đầu vào trên web
-meeting_notes = st.text_area(
-    "Dán Toàn Bộ Nội Dung Cuộc Họp Thô vào ô dưới đây:", 
-    height=300, 
-    placeholder="Dán nội dung, ghi chú, hoặc các yêu cầu về báo cáo của bạn..."
+# --- 1. Hộp tải file Ghi Âm ---
+uploaded_file = st.file_uploader(
+    "Tải lên file ghi âm cuộc họp (.mp3, .wav, .flac)", 
+    type=["mp3", "wav", "flac"]
 )
 
-# Nút kích hoạt Bot
+st.markdown("---") # Đường kẻ ngang để phân chia giao diện
+
+# --- 2. Hộp dán văn bản ---
+meeting_notes = st.text_area(
+    "HOẶC Dán Nội Dung Cuộc Họp Thô vào ô dưới đây:", 
+    height=200, 
+    placeholder="Chỉ dùng khi không tải file ghi âm."
+)
+
+
+# --- 3. LOGIC XỬ LÝ CHÍNH ---
 if st.button("Soạn Thảo Báo Cáo"):
-    if not meeting_notes:
-        st.warning("Vui lòng dán nội dung cuộc họp trước khi nhấn nút.")
-    else:
-        # Khung loading
-        with st.spinner("Đang gửi nội dung đến Gemini để xử lý..."):
-            
-            # Xây dựng nội dung cuối cùng cho mô hình
-            full_prompt = system_instruction + "\n\nNỘI DUNG CUỘC HỌP CẦN TÓM TẮT:\n---\n" + meeting_notes + "\n---"
-            
-            try:
-                # Gọi API
-                response = client.models.generate_content(
-                    model='gemini-2.5-pro', # Dùng Pro cho tác vụ phức tạp
-                    contents=full_prompt,
-                    config={
-                        "temperature": 0.1
-                    }
-                )
+    
+    if uploaded_file is None and not meeting_notes.strip():
+        # Lỗi nếu không có input nào
+        st.warning("Vui lòng tải lên file ghi âm HOẶC dán nội dung cuộc họp.")
+        st.stop()
+    
+    # Khối logic chính
+    with st.spinner("Đang xử lý nội dung..."):
+        
+        file = None
+        
+        try:
+            # --- ƯU TIÊN 1: Xử lý File Ghi Âm ---
+            if uploaded_file is not None:
+                st.info("Phát hiện file ghi âm. Đang ưu tiên phiên âm và tóm tắt file...")
+                # Tải file lên API
+                file = client.files.upload(file=uploaded_file, display_name=uploaded_file.name)
                 
-                # Hiển thị kết quả trên giao diện web
-                st.subheader("✅ Báo Cáo Buổi Họp Hoàn Chỉnh")
-                st.markdown(response.text) # Hiển thị kết quả dưới dạng Markdown
+                # Nội dung sẽ bao gồm Prompt + File
+                full_prompt_contents = [
+                    system_instruction, 
+                    file, 
+                    "Bây giờ, hãy tạo báo cáo họp/biên bản dựa trên nội dung được **phiên âm** từ file ghi âm này."
+                ]
+                model_to_use = 'gemini-2.5-pro' # Dùng Pro cho Audio
                 
-            except Exception as e:
-                st.error(f"Lỗi Kết Nối hoặc Xác Thực: {e}")
+            # --- ƯU TIÊN 2: Xử lý Văn bản Dán ---
+            elif meeting_notes.strip():
+                st.info("Phát hiện văn bản dán. Đang xử lý nội dung thô...")
+                # Nội dung chỉ là chuỗi văn bản
+                full_prompt_contents = system_instruction + "\n\nNỘI DUNG CUỘC HỌP CẦN TÓM TẮT:\n---\n" + meeting_notes + "\n---"
+                model_to_use = 'gemini-2.5-flash' # Dùng Flash cho Văn bản
+            
+            # --- Gọi API ---
+            response = client.models.generate_content(
+                model=model_to_use,
+                contents=full_prompt_contents,
+                config={"temperature": 0.1}
+            )
+            
+            st.subheader("✅ Báo Cáo Buổi Họp Hoàn Chỉnh")
+            st.markdown(response.text)
+            
+        except Exception as e:
+            st.error(f"Lỗi Kết Nối hoặc Xác Thực: {e}")
+            st.error("Vui lòng kiểm tra file audio có bị hỏng hay không, hoặc thử lại sau (Lỗi quá tải server 503).")
+            
+        finally:
+            # Xóa file khỏi máy chủ nếu file đã được tải lên
+            if file is not None:
+                client.files.delete(name=file.name)
+                st.success("Đã dọn dẹp file tạm trên máy chủ Gemini.")
+
