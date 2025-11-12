@@ -10,8 +10,10 @@ import os
 # ----------------------------------------------------
 # Đọc Key từ st.secrets
 try:
+    # Đã sửa lỗi canh lề
     API_KEY = st.secrets.GEMINI_API_KEY
 except AttributeError:
+    # Đã sửa lỗi canh lề
     st.error("LỖI CẤU HÌNH: Không tìm thấy GEMINI_API_KEY trong Streamlit Secrets.")
     st.stop() 
 
@@ -46,7 +48,7 @@ Quy tắc hoạt động:
 # 3. GIAO DIỆN STREAMLIT VÀ GỌI API
 # ----------------------------------------------------
 
-st.title("🤖 Trợ Lý Biên Bản  (VBI HCM - Gemini)")
+st.title("🤖 Trợ Lý Biên Bản (VBI HCM - Gemini)")
 st.caption("Xử lý Biên Bản từ Văn bản hoặc File Ghi Âm (MP3/WAV/FLAC).")
 
 # --- 1. Hộp tải file Ghi Âm ---
@@ -80,13 +82,13 @@ if st.button("Soạn Thảo Báo Cáo"):
         
         try:
             # --- ƯU TIÊN 1: Xử lý File Ghi Âm ---
-           if uploaded_file is not None:
+            if uploaded_file is not None:
                 st.info("Phát hiện file ghi âm. Đang ưu tiên phiên âm và tóm tắt file...")
                 
-                # SỬA LỖI Ở ĐÂY: Thêm mime_type
+                # Đã sửa lỗi cú pháp 'mime_type' và 'display_name'
                 file = client.files.upload(
                     file=uploaded_file, 
-                    mime_type=uploaded_file.type # <-- BẮT BUỘC PHẢI THÊM
+                    mime_type=uploaded_file.type 
                 )
                 
                 # Nội dung sẽ bao gồm Prompt + File
@@ -98,13 +100,14 @@ if st.button("Soạn Thảo Báo Cáo"):
                 model_to_use = 'gemini-2.5-pro' # Dùng Pro cho Audio
                 
             # --- ƯU TIÊN 2: Xử lý Văn bản Dán ---
-            elif meeting_notes.strip():
+            elif meeting_notes.strip(): # Mức thụt lề đã đúng
                 st.info("Phát hiện văn bản dán. Đang xử lý nội dung thô...")
                 # Nội dung chỉ là chuỗi văn bản
                 full_prompt_contents = system_instruction + "\n\nNỘI DUNG CUỘC HỌP CẦN TÓM TẮT:\n---\n" + meeting_notes + "\n---"
                 model_to_use = 'gemini-2.5-flash' # Dùng Flash cho Văn bản
             
             # --- Gọi API ---
+            # Khối này đã cùng mức thụt lề với if/elif
             response = client.models.generate_content(
                 model=model_to_use,
                 contents=full_prompt_contents,
@@ -123,6 +126,8 @@ if st.button("Soạn Thảo Báo Cáo"):
             if file is not None:
                 client.files.delete(name=file.name)
                 st.success("Đã dọn dẹp file tạm trên máy chủ Gemini.")
+
+
 
 
 
