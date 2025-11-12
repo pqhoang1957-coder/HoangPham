@@ -56,7 +56,6 @@ uploaded_file = st.file_uploader(
     "Tải lên file ghi âm cuộc họp (.mp3, .wav, .flac)", 
     type=["mp3", "wav", "flac"]
 )
-
 st.markdown("---") # Đường kẻ ngang để phân chia giao diện
 
 # --- 2. Hộp dán văn bản ---
@@ -124,6 +123,7 @@ if st.button("Soạn Thảo Báo Cáo"):
             if file is not None:
                 client.files.delete(name=file.name)
                 st.success("Đã dọn dẹp file tạm trên máy chủ Gemini.")
+
 
 
 
